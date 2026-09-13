@@ -414,30 +414,6 @@
     label();
   })();
 
-  // Exception picker
-  document.querySelectorAll('[data-opt]').forEach(function(o){
-    o.addEventListener('click',function(){
-      document.querySelectorAll('[data-opt]').forEach(function(x){x.classList.remove('on')});
-      o.classList.add('on');
-    });
-  });
-
-  // Calculator
-  (function(){
-    var pos=document.getElementById('pos'),mins=document.getElementById('mins'),rate=document.getElementById('rate');
-    function fmt(n){return n.toLocaleString('en-US');}
-    function run(){
-      var hours=Math.round(pos.value*mins.value/60*4.33);
-      document.getElementById('pos-o').textContent=pos.value;
-      document.getElementById('mins-o').textContent=mins.value;
-      document.getElementById('rate-o').textContent='$'+rate.value;
-      document.getElementById('hours').textContent=fmt(hours);
-      document.getElementById('dollars').textContent='$'+fmt(Math.round(hours*rate.value));
-    }
-    [pos,mins,rate].forEach(function(i){i.addEventListener('input',run)});
-    run();
-  })();
-
   // Form submission
   document.getElementById('sample-form').addEventListener('submit',function(e){
     e.preventDefault();

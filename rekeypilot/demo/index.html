@@ -96,7 +96,15 @@
   .label-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
   .label-row label{margin:0}
   .err{color:var(--red);font-size:13px;margin:6px 0 0}
-  .samples{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .samples{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .samples button{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:transparent;font:inherit;font-size:14px;color:var(--ink-2);cursor:pointer}
+  .samples button[data-tone="messy"]{border-style:dashed}
+  .samples button[aria-selected="true"]{background:var(--amber-bg);color:var(--amber-t);border-style:solid;border-color:transparent;font-weight:500}
+  .samples button:hover{background:var(--paper-2);color:var(--ink)}
+  .samples button[aria-selected="true"]:hover{background:var(--amber-bg);color:var(--amber-t)}
+  #sample-hint{margin-top:8px}
+  .readout .r.needs-review,.line.needs-review{box-shadow:inset 3px 0 0 var(--amber)}
+  tr.needs-review td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
   .actions{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-top:24px}
   .fields{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px}
   .summary{margin-top:18px;padding:14px 16px;border:1px solid var(--red);border-radius:8px;background:var(--red-bg)}

@@ -138,21 +138,72 @@
     stepperEl.innerHTML = html;
   }
 
+  function activeSample() {
+    return (P.SAMPLES || []).find(function (sample) {
+      return sample.text === state.raw;
+    }) || null;
+  }
+
+  function renderSampleSwitcher(andRead) {
+    var active = activeSample();
+    var html = '<div class="samples" role="tablist" aria-label="Sample purchase orders">';
+    (P.SAMPLES || []).forEach(function (sample) {
+      var selected = active && sample.id === active.id;
+      html += '<button type="button" role="tab" data-action="sample" data-sample="' + esc(sample.id) + '" data-tone="' + esc(sample.tone || "") + '"' +
+        (andRead ? ' data-read="1"' : "") +
+        ' aria-selected="' + (selected ? "true" : "false") + '">' + esc(sample.label) + "</button>";
+    });
+    html += "</div>";
+    html += '<p class="small" id="sample-hint">' + esc(active ? active.blurb : "Paste your own text, or pick a sample above.") + "</p>";
+    if (andRead) html += '<p class="small">Choosing a sample reads it again and replaces review edits.</p>';
+    return html;
+  }
+
+  function syncSampleSwitcher() {
+    var active = activeSample();
+    var buttons = document.querySelectorAll("[data-sample]");
+    buttons.forEach(function (button) {
+      button.setAttribute("aria-selected", active && button.getAttribute("data-sample") === active.id ? "true" : "false");
+    });
+    var hint = document.getElementById("sample-hint");
+    if (hint) hint.textContent = active ? active.blurb : "Paste your own text, or pick a sample above.";
+  }
+
+  function shakyValue(value, confidence) {
+    return !!String(value || "").trim() && confidence < 75;
+  }
+
+  function unitCell(line) {
+    if (line.unitBad) {
+      var badHint = line.suggestedUnit ? " <span class=\"muted\">unrecognized, catalog uses " + esc(line.suggestedUnit) + "</span>" : ' <span class="muted">unrecognized</span>';
+      return esc(line.unit) + badHint;
+    }
+    if (line.unitMissing) {
+      var guess = line.suggestedUnit ? " <span class=\"muted\">missing, catalog uses " + esc(line.suggestedUnit) + "</span>" : ' <span class="muted">missing</span>';
+      return "—" + guess;
+    }
+    return esc(line.unit || "—");
+  }
+
+  function messyBanner(parsed) {
+    var shakyLines = parsed.lines.filter(function (line) {
+      return !line.matched || line.confidence < 75;
+    }).length;
+    if (shakyLines < 2 || !(parsed.customer.confidence < 70)) return "";
+    return '<p class="banner">This paste is messy. Confidence dropped and some lines are unmatched, so review and edit before anything is created.</p>';
+  }
+
   function renderPaste() {
     return (
       '<form id="paste-form" novalidate autocomplete="off">' +
         '<h2 id="step-title" tabindex="-1">Paste a purchase order</h2>' +
-        '<p class="lead">Paste the email your customer sent, or start from a synthetic example. Reading happens in this browser.</p>' +
+        '<p class="lead">Paste the email your customer sent, or switch samples. Harborview is clean. Mike&rsquo;s shop and Dave @ clinic are messy pastes. Reading happens in this browser.</p>' +
+        renderSampleSwitcher(false) +
         '<div class="field">' +
           '<label for="po-text">Purchase order text</label>' +
           '<textarea id="po-text" name="po"' + describedBy("po-text", !!state.rawError) + '>' + esc(state.raw) + "</textarea>" +
           (state.rawError ? '<p class="err" id="po-text-error">' + esc(state.rawError) + "</p>" : "") +
         "</div>" +
-        '<div class="samples">' +
-          '<button class="btn btn-s" type="button" data-action="sample">Use sample PO</button>' +
-          '<button class="btn btn-s" type="button" data-action="uncertain">Load uncertain PO</button>' +
-        "</div>" +
-        '<p class="small">The sample is Harborview Clinic, PO 20817. The uncertain PO includes a product the catalog does not know, so you can see a review flag.</p>' +
         (state.parsed ? '<p class="small warn">Reading again replaces any edits on the review step.</p>' : "") +
         '<div class="actions">' +
           '<button class="btn btn-p" type="submit">Read purchase order</button>' +
@@ -176,10 +227,13 @@
     var html =
       '<h2 id="step-title" tabindex="-1">What RekeyPilot read</h2>' +
       '<p class="lead">Mock parse of the text you pasted. The same purchase order always fills the same fields. Edit them on the next step before anything is created.</p>' +
+      renderSampleSwitcher(true) +
+      messyBanner(parsed) +
       '<div class="readout">';
     rows.forEach(function (row) {
+      var shaky = shakyValue(row[1].value, row[1].confidence) ? " needs-review" : "";
       html +=
-        '<div class="r"><span class="k">' + esc(row[0]) + "</span>" +
+        '<div class="r' + shaky + '"><span class="k">' + esc(row[0]) + "</span>" +
         '<span class="v">' + (row[1].value ? esc(row[1].value) : '<span class="muted">—</span>') + "</span>" +
         chip(confidenceStatus(row[1].value, row[1].confidence)) + "</div>";
     });
@@ -193,8 +247,9 @@
         "<th>Qty</th><th>Unit</th><th>From the PO</th><th>Matched item</th><th>SKU</th><th>Price</th><th>Confidence</th>" +
         "</tr></thead><tbody>";
       parsed.lines.forEach(function (line) {
-        html += "<tr><td class=\"mono\">" + esc(line.qty) + "</td><td class=\"mono\">" + esc(line.unit) +
-          "</td><td>" + esc(line.source) + "</td><td>" + esc(line.name) +
+        var shaky = !line.matched || line.confidence < 75 ? " needs-review" : "";
+        html += "<tr class=\"" + shaky.trim() + "\"><td class=\"mono\">" + esc(line.qty) + "</td><td class=\"mono\">" + unitCell(line) +
+          "</td><td>" + esc(line.source) + "</td><td>" + (line.matched ? esc(line.name) : '<span class="muted">Unmatched.</span> ' + esc(line.name)) +
           "</td><td class=\"mono\">" + (line.sku ? esc(line.sku) : "—") +
           "</td><td class=\"mono\">" + (line.price === "" ? "—" : esc(formatMoney(line.price))) +
           "</td><td>" + chip(confidenceStatus(line.sku || line.name, line.confidence)) + "</td></tr>";
@@ -262,14 +317,18 @@
     var qtyErr = !!state.errors["qty-" + id];
     var descErr = !!state.errors["desc-" + id];
     var priceErr = !!state.errors["price-" + id];
-    var options = UNITS.map(function (unit) {
-      return '<option value="' + unit + '"' + (line.unit === unit ? " selected" : "") + ">" + unit + "</option>";
-    }).join("");
+    var known = UNITS.indexOf(line.unit) !== -1;
+    var options = (!line.unit ? '<option value="" selected>needs unit</option>' : "") +
+      (!known && line.unit ? '<option value="' + esc(line.unit) + '" selected>' + esc(line.unit) + " (unrecognized)</option>" : "") +
+      UNITS.map(function (unit) {
+        return '<option value="' + unit + '"' + (line.unit === unit ? " selected" : "") + ">" + unit + "</option>";
+      }).join("");
     var source = line.source
       ? '<p class="source">From the PO: ' + esc(line.source) + "</p>"
       : "";
+    var shaky = line.source && line.confidence < 75 ? " needs-review" : "";
     return (
-      '<div class="line">' +
+      '<div class="line' + shaky + '">' +
         '<div class="line-grid">' +
           '<div><label for="qty-' + id + '">Qty</label>' +
             '<input id="qty-' + id + '" data-line="' + id + '" data-key="qty" inputmode="decimal" type="number" min="0" step="1" value="' + esc(line.qty) + '"' + describedBy("qty-" + id, qtyErr) + ">" +
@@ -466,9 +525,22 @@
     setStatus("Read " + count + " line " + (count === 1 ? "item" : "items") + " from the purchase order.");
   }
 
-  function loadSample(kind) {
-    state.raw = kind === "uncertain" ? P.SAMPLE_UNCERTAIN_PO : P.SAMPLE_PO;
+  function loadSample(id, andRead) {
+    var sample = (P.SAMPLES || []).find(function (item) {
+      return item.id === id;
+    });
+    if (!sample) {
+      if (id === "uncertain") sample = (P.SAMPLES || []).find(function (item) { return item.id === "lakeside"; });
+      if (!sample && P.SAMPLES && P.SAMPLES.length) sample = P.SAMPLES[0];
+    }
+    if (!sample) return;
+    state.raw = sample.text;
     state.rawError = "";
+    if (andRead) {
+      readPo();
+      setStatus(sample.label + " loaded. " + sample.blurb);
+      return;
+    }
     if (state.step !== 1) state.step = 1;
     render();
     var box = document.getElementById("po-text");
@@ -476,7 +548,7 @@
       box.focus();
       box.setSelectionRange(box.value.length, box.value.length);
     }
-    setStatus(kind === "uncertain" ? "Uncertain sample loaded." : "Sample purchase order loaded.");
+    setStatus(sample.label + " sample loaded.");
   }
 
   function addLine() {
@@ -568,6 +640,7 @@
     var target = event.target;
     if (target.id === "po-text") {
       state.raw = target.value;
+      syncSampleSwitcher();
       if (state.rawError) {
         state.rawError = "";
         var err = document.getElementById("po-text-error");
@@ -610,8 +683,9 @@
     var button = event.target.closest("button");
     if (!button || button.disabled) return;
     var action = button.getAttribute("data-action");
-    if (action === "sample") loadSample("sample");
-    else if (action === "uncertain") loadSample("uncertain");
+    if (action === "sample" || action === "uncertain") {
+      loadSample(button.getAttribute("data-sample") || (action === "uncertain" ? "lakeside" : "harborview"), button.getAttribute("data-read") === "1");
+    }
     else if (action === "goto") goto(button.getAttribute("data-step"));
     else if (action === "add-line") addLine();
     else if (action === "remove-line") removeLine(button.getAttribute("data-id"));

@@ -71,7 +71,7 @@
 
   var SAMPLE_PO = [
     "From: Mark Ellison <orders@harborview.com>",
-    "Subject: PO 20817 \u2014 Harborview Clinic",
+    "Subject: PO 20817 — Harborview Clinic",
     "",
     "Hi Dana,",
     "",
@@ -79,7 +79,7 @@
     "",
     "10 cs nitrile gloves, medium, blue",
     "4 cs paper towels (the multifold ones)",
-    "2 \u00d7 5 gal floor cleaner, neutral",
+    "2 × 5 gal floor cleaner, neutral",
     "",
     "Deliver to the Elm St. location, 410 Elm Street, Portland OR 97214. Ground is fine.",
     "",
@@ -92,7 +92,7 @@
     "From: priya@lakesidemedical.org",
     "Subject: Order for next week",
     "",
-    "Hi \u2014 please ship when you can:",
+    "Hi — please ship when you can:",
     "",
     "6 boxes of those blue gloves, large",
     "3 cs can liners 33 gallon",
@@ -136,11 +136,11 @@
   }
 
   function parseQtyLine(raw) {
-    var line = raw.trim().replace(/^[-*\u2022]\s*/, "");
+    var line = raw.trim().replace(/^[-*•]\s*/, "");
     if (!line || isMetaLine(line)) return null;
 
     var mult = line.match(
-      /^(\d+(?:\.\d+)?)\s*[x\u00d7]\s*(\d+(?:\.\d+)?)\s*(gal|gallon|gallons)\s+(.+)$/i
+      /^(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(gal|gallon|gallons)\s+(.+)$/i
     );
     if (mult) {
       return {
@@ -289,7 +289,7 @@
   function customerFromSubject(text) {
     var m = text.match(/^subject:\s*(.+)$/im);
     if (!m) return "";
-    var stripped = m[1].replace(/^po\s*#?\s*[A-Z0-9-]+\s*[\u2014\u2013:\-]\s*/i, "").trim();
+    var stripped = m[1].replace(/^po\s*#?\s*[A-Z0-9-]+\s*[—–:\-]\s*/i, "").trim();
     if (!stripped || stripped === m[1].trim()) return "";
     if (/^order\b/i.test(stripped)) return "";
     return stripped;

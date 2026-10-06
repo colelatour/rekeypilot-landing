@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" data-theme="dark" class="booting">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review — RekeyPilot</title>
+<meta name="description" content="Review a purchase order before anything is created. Preview only.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body data-page="review">
+<a class="skip" href="#title">Skip to review</a>
+<nav>
+  <div class="wrap">
+    <a class="logo" href="home.html"><i aria-hidden="true"></i>RekeyPilot</a>
+    <span class="nav-actions">
+      <span class="who"><strong id="company">Northline</strong> · <span id="person">Sam</span></span>
+      <button class="btn btn-s" id="signout" type="button">Sign out</button>
+    </span>
+  </div>
+</nav>
+<main>
+  <div class="wrap">
+    <p class="crumbs"><a href="home.html">Home</a> <span aria-hidden="true">/</span> <span id="crumb">Review</span></p>
+    <p class="kicker">Purchase order</p>
+    <h1 id="title">Review</h1>
+    <p class="lead" id="lead"></p>
+    <div id="panel"></div>
+  </div>
+</main>
+<footer>
+  <div class="wrap">
+    <span>Preview only. Nothing is sent to ShipStation or QuickBooks.</span>
+    <a href="home.html">Home</a>
+  </div>
+</footer>
+<noscript><p class="wrap">This preview needs JavaScript. It still does not contact ShipStation or QuickBooks.</p></noscript>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

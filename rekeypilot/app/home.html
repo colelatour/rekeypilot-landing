@@ -24,19 +24,24 @@
 <main>
   <div class="wrap">
     <p class="kicker">Coordinator</p>
-    <h1 id="welcome">Welcome, Sam. Northline has 4 purchase orders ready to review.</h1>
-    <div id="metrics" class="metrics"></div>
+    <h1 id="welcome">Welcome, Sam</h1>
+    <p class="welcome-sub" id="welcome-count">You have 4 orders to review</p>
+    <dl id="stats" class="stats"></dl>
     <h2 class="sub">Purchase orders</h2>
     <div id="list" class="list"></div>
+    <div id="done-wrap" hidden>
+      <h2 class="sub">Completed this session</h2>
+      <div id="done-list" class="list"></div>
+    </div>
   </div>
 </main>
 <footer>
   <div class="wrap">
-    <span>Preview only. Nothing is sent to ShipStation or QuickBooks.</span>
+    <span>Preview only. Nothing is sent.</span>
     <a href="home.html">Home</a>
   </div>
 </footer>
-<noscript><p class="wrap">This preview needs JavaScript. It still does not contact ShipStation or QuickBooks.</p></noscript>
+<noscript><p class="wrap">This preview needs JavaScript. It still does not send anything.</p></noscript>
 <script src="data.js"></script>
 <script src="app.js"></script>
 </body>

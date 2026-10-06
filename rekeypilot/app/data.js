@@ -85,6 +85,7 @@
         id: "mike",
         label: "Mike's shop",
         tone: "messy",
+        secondLook: true,
         blurb: "Forwarded email, a nickname, typos, and missing units. Confidence should drop.",
         summary: "2 blue gloves, med · 4 multifold towels · 2 floor cleaner · 1 css can liners · lemon stuff",
         confidence: 36,
@@ -132,6 +133,7 @@
         id: "dave",
         label: "Dave @ clinic",
         tone: "messy",
+        secondLook: true,
         blurb: "Casual forward with bad units, a forgotten quantity, and a vague ship-to.",
         summary: "10 boxs blue gloves, lg · multifold towels · floor cleaner · liners, qty forgotten",
         confidence: 41,
@@ -179,12 +181,7 @@
     ];
   }
 
-  var METRICS = [
-    { label: "Ready to review", value: "4" },
-    { label: "Needs a second look", value: "2" },
-    { label: "Reviewed, not sent", value: "3" },
-    { label: "Oldest waiting", value: "2 days" },
-  ];
+  var OLDEST_WAITING = "2 days";
 
   var ORDERS = lines();
 
@@ -224,10 +221,10 @@
     }, 0));
     var key = String(order.poNumber || "").replace(/[^A-Za-z0-9-]/g, "").toUpperCase() || "DRAFT";
     return {
-      shipstation: {
-        system: "ShipStation",
+      shipping: {
+        system: "Shipping order",
         orderNumber: order.poNumber || "",
-        orderKey: "SS-" + key,
+        orderKey: "ORD-" + key,
         customer: order.customer || "",
         email: order.email || "",
         shipTo: order.shipTo || "",
@@ -235,8 +232,8 @@
         notes: order.notes || "",
         items: built,
       },
-      quickbooks: {
-        system: "QuickBooks",
+      invoice: {
+        system: "Invoice",
         invoiceNumber: "INV-" + key,
         customer: order.customer || "",
         email: order.email || "",
@@ -252,7 +249,7 @@
   }
 
   root.RekeyAppData = {
-    METRICS: METRICS,
+    OLDEST_WAITING: OLDEST_WAITING,
     ORDERS: ORDERS,
     getOrder: getOrder,
     buildOutcome: buildOutcome,

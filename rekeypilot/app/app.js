@@ -4,6 +4,7 @@
 (function () {
   var SESSION_KEY = "rekeypilot_app_session";
   var DRAFT_KEY = "rekeypilot_app_drafts";
+  var COMPLETED_KEY = "rekeypilot_app_completed";
   var FIELDS = [
     { key: "customer", label: "Customer" },
     { key: "email", label: "Email" },
@@ -74,6 +75,25 @@
 
   function queryId() {
     return new URLSearchParams(location.search).get("id") || "";
+  }
+
+  function readCompleted() {
+    try {
+      var parsed = JSON.parse(sessionStorage.getItem(COMPLETED_KEY) || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function markCompleted(id) {
+    var ids = readCompleted();
+    if (ids.indexOf(id) === -1) ids.push(id);
+    sessionStorage.setItem(COMPLETED_KEY, JSON.stringify(ids));
+  }
+
+  function clearCompleted() {
+    sessionStorage.removeItem(COMPLETED_KEY);
   }
 
   function readDrafts() {
@@ -161,14 +181,15 @@
     if (signout) {
       signout.addEventListener("click", function () {
         sessionStorage.removeItem(SESSION_KEY);
+        clearCompleted();
         location.href = "index.html";
       });
     }
   }
 
-  function welcomeText(session) {
-    var ready = window.RekeyAppData.METRICS[0].value;
-    return "Welcome, " + session.person + ". " + session.company + " has " + ready + " purchase orders ready to review.";
+  function countLine(ready) {
+    var noun = ready === 1 ? "order" : "orders";
+    return "You have " + ready + " " + noun + " to review";
   }
 
   function wireSignIn() {
@@ -190,6 +211,7 @@
         return;
       }
       input.removeAttribute("aria-invalid");
+      clearCompleted();
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
         company: "Northline",
         person: "Sam",
@@ -199,32 +221,73 @@
     });
   }
 
+  function orderMain(order) {
+    var mail = order.email.value
+      ? ' <span class="po-mail">· ' + esc(order.email.value) + "</span>"
+      : "";
+    return '<span class="po-main">' +
+      '<span class="po-name">' + esc(order.label) + mail + "</span>" +
+      '<span class="po-sum">' + esc(order.summary) + "</span>" +
+      "</span>";
+  }
+
   function renderHome(session) {
     var data = window.RekeyAppData;
+    var doneIds = readCompleted();
+    var readyOrders = data.ORDERS.filter(function (order) {
+      return doneIds.indexOf(order.id) === -1;
+    });
+    var doneOrders = doneIds.map(function (id) {
+      return data.getOrder(id);
+    }).filter(Boolean);
     var welcome = document.getElementById("welcome");
-    if (welcome) welcome.textContent = welcomeText(session);
-    var metrics = document.getElementById("metrics");
-    if (metrics) {
-      metrics.innerHTML = data.METRICS.map(function (metric) {
-        return '<article class="metric"><p class="k">' + esc(metric.label) + '</p><p class="n">' + esc(metric.value) + "</p></article>";
+    var count = document.getElementById("welcome-count");
+    if (welcome) welcome.textContent = "Welcome, " + session.person;
+    if (count) count.textContent = countLine(readyOrders.length);
+
+    var secondLook = readyOrders.filter(function (order) {
+      return order.secondLook;
+    }).length;
+    var stats = document.getElementById("stats");
+    if (stats) {
+      var rows = [
+        ["Ready to review", String(readyOrders.length)],
+        ["Needs a second look", String(secondLook)],
+        ["Completed this session", String(doneOrders.length)],
+        ["Oldest waiting", readyOrders.length ? data.OLDEST_WAITING : "—"],
+      ];
+      stats.innerHTML = rows.map(function (row) {
+        return "<div><dt>" + esc(row[0]) + "</dt><dd>" + esc(row[1]) + "</dd></div>";
       }).join("");
     }
+
     var list = document.getElementById("list");
     if (list) {
-      list.innerHTML = data.ORDERS.map(function (order) {
-        var mail = order.email.value
-          ? ' <span class="po-mail">· ' + esc(order.email.value) + "</span>"
-          : "";
-        return '<a class="po" href="review.html?id=' + encodeURIComponent(order.id) + '">' +
-          '<span class="po-main">' +
-            '<span class="po-name">' + esc(order.label) + mail + "</span>" +
-            '<span class="po-sum">' + esc(order.summary) + "</span>" +
-          "</span>" +
-          '<span class="po-side">' +
-            chip(confidenceStatus(order.summary, order.confidence)) +
-            '<span class="po-status">' + esc(order.status) + "</span>" +
-          "</span></a>";
-      }).join("");
+      list.innerHTML = readyOrders.length
+        ? readyOrders.map(function (order) {
+          return '<a class="po" href="review.html?id=' + encodeURIComponent(order.id) + '">' +
+            orderMain(order) +
+            '<span class="po-side">' +
+              chip(confidenceStatus(order.summary, order.confidence)) +
+              '<span class="po-status">' + esc(order.status) + "</span>" +
+            "</span></a>";
+        }).join("")
+        : '<div class="po is-static"><span class="po-sum">Nothing is waiting.</span></div>';
+    }
+
+    var doneWrap = document.getElementById("done-wrap");
+    var doneList = document.getElementById("done-list");
+    if (doneWrap && doneList) {
+      if (!doneOrders.length) {
+        doneWrap.hidden = true;
+        doneList.innerHTML = "";
+      } else {
+        doneWrap.hidden = false;
+        doneList.innerHTML = doneOrders.map(function (order) {
+          return '<div class="po is-static">' + orderMain(order) +
+            '<span class="po-side"><span class="po-status">Completed</span></span></div>';
+        }).join("");
+      }
     }
     show();
   }
@@ -248,7 +311,7 @@
     var crumb = document.getElementById("crumb");
     if (!order) {
       if (title) title.textContent = "That purchase order is not in this preview.";
-      if (lead) lead.textContent = "Head back to the four purchase orders waiting for Northline.";
+      if (lead) lead.textContent = "Head back to the purchase orders still waiting.";
       if (panel) panel.innerHTML = '<div class="actions"><a class="btn btn-p" href="home.html">Back to home</a></div>';
       show();
       return;
@@ -346,13 +409,13 @@
     return "<div><dt>" + esc(label) + "</dt><dd>" + (value ? esc(value) : "—") + "</dd></div>";
   }
 
-  function renderShipStation(ss) {
+  function renderShipping(ss) {
     var rows = ss.items.map(function (item) {
       return "<tr><td class=\"mono\">" + (item.sku ? esc(item.sku) : "—") + "</td><td>" + esc(item.description || "—") +
         "</td><td class=\"mono\">" + esc(item.qty) + " " + esc(item.unit) + "</td></tr>";
     }).join("");
-    return '<article class="doc" aria-label="ShipStation order preview">' +
-      '<div class="hd"><div><p class="kicker">ShipStation</p><h3>Order ' + esc(ss.orderNumber || "—") + "</h3></div>" +
+    return '<article class="doc" aria-label="Shipping order preview">' +
+      '<div class="hd"><div><p class="kicker">Shipping order</p><h3>Order ' + esc(ss.orderNumber || "—") + "</h3></div>" +
       '<span class="chip e">Not sent</span></div><dl>' +
       pair("Order key", ss.orderKey) +
       pair("Customer", ss.customer) +
@@ -366,7 +429,7 @@
       "</tbody></table></div></article>";
   }
 
-  function renderQuickBooks(qb) {
+  function renderInvoice(qb) {
     var rows = qb.lines.map(function (line) {
       var item = line.sku || line.description || "—";
       return "<tr><td class=\"mono\">" + esc(item) + "</td><td>" + esc(line.description || "—") +
@@ -374,8 +437,8 @@
         "</td><td class=\"mono\">" + esc(formatMoney(line.amount)) + "</td></tr>";
     }).join("");
     var note = qb.missingPrice ? '<p class="small warn">Lines without a unit price are left off the subtotal.</p>' : "";
-    return '<article class="doc" aria-label="QuickBooks invoice preview">' +
-      '<div class="hd"><div><p class="kicker">QuickBooks</p><h3>Invoice ' + esc(qb.invoiceNumber) + "</h3></div>" +
+    return '<article class="doc" aria-label="Invoice preview">' +
+      '<div class="hd"><div><p class="kicker">Invoice</p><h3>' + esc(qb.invoiceNumber) + "</h3></div>" +
       '<span class="chip e">Not sent</span></div><dl>' +
       pair("Customer", qb.customer) +
       pair("Email", qb.email) +
@@ -409,6 +472,18 @@
     }
     document.title = "Preview " + order.label + " — RekeyPilot";
     if (crumb) crumb.textContent = order.label;
+    var sent = new URLSearchParams(location.search).get("sent") === "1";
+    if (sent) {
+      markCompleted(order.id);
+      document.title = "Done — RekeyPilot";
+      if (kicker) kicker.textContent = "Preview";
+      if (title) title.textContent = "Invoice sent and shipping information updated.";
+      if (lead) lead.textContent = "Preview only. Nothing was sent. " + order.label + " is finished for this session.";
+      if (actions) actions.innerHTML = '<a class="btn btn-p" href="home.html">Back to home</a>';
+      if (panel) panel.innerHTML = "";
+      show();
+      return;
+    }
     if (kicker) kicker.textContent = "Not sent";
     if (title) title.textContent = "Nothing was sent.";
     var saved = readDrafts()[order.id];
@@ -416,16 +491,17 @@
     var outcome = data.buildOutcome(draft);
     var poBit = draft.poNumber ? " · PO " + draft.poNumber : "";
     if (lead) {
-      lead.textContent = order.label + poBit + " stays in review. The ShipStation order and QuickBooks invoice below were not created.";
+      lead.textContent = order.label + poBit + " is still in review. The shipping order and invoice below were not created.";
     }
     var reviewHref = "review.html?id=" + encodeURIComponent(order.id);
+    var doneHref = "preview.html?id=" + encodeURIComponent(order.id) + "&sent=1";
     if (actions) {
       actions.innerHTML = '<a class="btn btn-s" href="' + reviewHref + '">Back to review</a>' +
-        '<a class="btn btn-p" href="home.html">Back to home</a>';
+        '<a class="btn btn-p" href="' + doneHref + '">Continue</a>';
     }
-    var payload = { mocked: true, sent: false, shipstation: outcome.shipstation, quickbooks: outcome.quickbooks };
-    panel.innerHTML = '<p class="banner"><strong>Not sent.</strong> Nothing was sent. ShipStation and QuickBooks were not contacted.</p>' +
-      '<div class="docs">' + renderShipStation(outcome.shipstation) + renderQuickBooks(outcome.quickbooks) + "</div>" +
+    var payload = { mocked: true, sent: false, shipping: outcome.shipping, invoice: outcome.invoice };
+    panel.innerHTML = '<p class="banner"><strong>Not sent.</strong> Nothing was sent.</p>' +
+      '<div class="docs">' + renderShipping(outcome.shipping) + renderInvoice(outcome.invoice) + "</div>" +
       '<details class="original"><summary>Payload that would be sent</summary><pre>' + esc(JSON.stringify(payload, null, 2)) + "</pre></details>";
     show();
   }

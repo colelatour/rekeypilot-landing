@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — RekeyPilot</title>
+<meta http-equiv="refresh" content="0; url=../rekeypilot/app/index.html">
+<link rel="canonical" href="../rekeypilot/app/index.html">
+</head>
+<body>
+<p><a id="continue" href="../rekeypilot/app/index.html">Continue to sign in</a></p>
+<script>
+  var dest = "../rekeypilot/app/index.html" + location.search + location.hash;
+  document.getElementById("continue").setAttribute("href", dest);
+  location.replace(dest);
+</script>
+</body>
+</html>

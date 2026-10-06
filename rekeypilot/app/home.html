@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en" data-theme="dark" class="booting">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home — RekeyPilot</title>
+<meta name="description" content="Northline purchase orders ready to review. Preview only. Nothing is sent.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body data-page="home">
+<a class="skip" href="#welcome">Skip to home</a>
+<nav>
+  <div class="wrap">
+    <a class="logo" href="home.html"><i aria-hidden="true"></i>RekeyPilot</a>
+    <span class="nav-actions">
+      <span class="who"><strong id="company">Northline</strong> · <span id="person">Sam</span></span>
+      <button class="btn btn-s" id="signout" type="button">Sign out</button>
+    </span>
+  </div>
+</nav>
+<main>
+  <div class="wrap">
+    <p class="kicker">Coordinator</p>
+    <h1 id="welcome">Welcome, Sam</h1>
+    <p class="welcome-sub" id="welcome-count">You have 4 orders to review</p>
+    <dl id="stats" class="stats"></dl>
+    <h2 class="sub">Purchase orders</h2>
+    <div id="list" class="list"></div>
+    <div id="done-wrap" hidden>
+      <h2 class="sub">Completed this session</h2>
+      <div id="done-list" class="list"></div>
+    </div>
+  </div>
+</main>
+<footer>
+  <div class="wrap">
+    <span>Preview only. Nothing is sent.</span>
+    <a href="home.html">Home</a>
+  </div>
+</footer>
+<noscript><p class="wrap">This preview needs JavaScript. It still does not send anything.</p></noscript>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

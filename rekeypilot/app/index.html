@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — RekeyPilot</title>
+<meta name="description" content="Sign in to the RekeyPilot preview and review purchase orders. Nothing is sent.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body data-page="signin">
+<a class="skip" href="#signin">Skip to sign in</a>
+<nav>
+  <div class="wrap">
+    <a class="logo" href="/"><i aria-hidden="true"></i>RekeyPilot</a>
+    <span class="nav-actions"><span class="muted">App preview</span></span>
+  </div>
+</nav>
+<main>
+  <div class="wrap">
+    <p class="kicker">Northline</p>
+    <h1>Sign in to review purchase orders.</h1>
+    <p class="lead">Work email only. No password, and nothing is sent.</p>
+    <form class="signin" id="signin" method="post" action="home.html" novalidate autocomplete="off">
+      <div class="field">
+        <label for="email">Work email</label>
+        <input id="email" name="email" type="text" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false">
+        <p class="err" id="email-error" hidden>Enter your work email.</p>
+      </div>
+      <div class="actions">
+        <button class="btn btn-p" type="submit">Continue</button>
+      </div>
+    </form>
+  </div>
+</main>
+<footer>
+  <div class="wrap">
+    <span>Preview only. No account is checked.</span>
+    <a href="/">RekeyPilot</a>
+  </div>
+</footer>
+<noscript><p class="wrap">This preview needs JavaScript. It still does not send anything.</p></noscript>
+<script src="app.js"></script>
+</body>
+</html>

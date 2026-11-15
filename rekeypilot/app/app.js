@@ -2,24 +2,15 @@
  * Logged-in app preview. Fake session only. No network, no auth provider.
  */
 (function () {
+  var core = window.RekeyAppCore;
   var SESSION_KEY = "rekeypilot_app_session";
   var DRAFT_KEY = "rekeypilot_app_drafts";
-  var COMPLETED_KEY = "rekeypilot_app_completed";
-  var FIELDS = [
-    { key: "customer", label: "Customer" },
-    { key: "email", label: "Email" },
-    { key: "poNumber", label: "PO #" },
-    { key: "shipTo", label: "Ship to" },
-    { key: "shipMethod", label: "Ship method" },
-    { key: "terms", label: "Terms" },
-  ];
+  var FIELDS = core.FIELDS;
 
   var page = document.body.getAttribute("data-page");
 
   function esc(value) {
-    return String(value == null ? "" : value).replace(/[&<>"']/g, function (ch) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
-    });
+    return core.esc(value);
   }
 
   function readSession() {
@@ -48,29 +39,15 @@
   }
 
   function confidenceStatus(value, confidence) {
-    if (!String(value || "").trim()) {
-      return { kind: "miss", label: "not found", aria: "Not found in the purchase order" };
-    }
-    var score = Number(confidence) || 0;
-    if (score >= 90) {
-      return { kind: "ok", label: score + "%", aria: "Confidence " + score + " percent" };
-    }
-    return {
-      kind: "review",
-      label: "review " + score + "%",
-      aria: "Needs review, confidence " + score + " percent",
-    };
+    return core.confidenceStatus(value, confidence);
   }
 
   function chip(status) {
-    var kind = status.kind;
-    var cls = kind === "ok" ? "g" : kind === "review" ? "a" : kind === "miss" ? "bad" : "e";
-    return '<span class="chip ' + cls + '" aria-label="' + esc(status.aria) + '">' + esc(status.label) + "</span>";
+    return core.chip(status);
   }
 
   function formatMoney(amount) {
-    if (amount == null || Number.isNaN(Number(amount))) return "—";
-    return Number(amount).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    return core.formatMoney(amount);
   }
 
   function queryId() {
@@ -78,22 +55,15 @@
   }
 
   function readCompleted() {
-    try {
-      var parsed = JSON.parse(sessionStorage.getItem(COMPLETED_KEY) || "[]");
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
-    }
+    return core.readCompleted(sessionStorage);
   }
 
   function markCompleted(id) {
-    var ids = readCompleted();
-    if (ids.indexOf(id) === -1) ids.push(id);
-    sessionStorage.setItem(COMPLETED_KEY, JSON.stringify(ids));
+    core.markCompleted(sessionStorage, id);
   }
 
   function clearCompleted() {
-    sessionStorage.removeItem(COMPLETED_KEY);
+    core.clearCompleted(sessionStorage);
   }
 
   function readDrafts() {
@@ -111,56 +81,19 @@
   }
 
   function seedDraft(order) {
-    return {
-      customer: order.customer.value,
-      email: order.email.value,
-      poNumber: order.poNumber.value,
-      shipTo: order.shipTo.value,
-      shipMethod: order.shipMethod.value,
-      terms: order.terms.value,
-      notes: order.notes.value,
-      lines: order.lines.map(function (line) {
-        return {
-          qty: line.qty,
-          unit: line.unit,
-          description: line.description,
-          sku: line.sku,
-          price: line.price,
-        };
-      }),
-    };
+    return core.seedDraft(order);
   }
 
   function draftUsable(draft, order) {
-    if (!draft || !draft.lines || draft.lines.length !== order.lines.length) return false;
-    for (var i = 0; i < FIELDS.length; i++) {
-      if (!Object.prototype.hasOwnProperty.call(draft, FIELDS[i].key)) return false;
-    }
-    return Object.prototype.hasOwnProperty.call(draft, "notes");
-  }
-
-  function fieldChanged(draft, order, key) {
-    return String(draft[key] == null ? "" : draft[key]) !== String(order[key].value);
-  }
-
-  function lineChanged(draftLine, original) {
-    return ["qty", "unit", "description", "sku", "price"].some(function (key) {
-      return String(draftLine[key] == null ? "" : draftLine[key]) !== String(original[key] == null ? "" : original[key]);
-    });
+    return core.draftUsable(draft, order);
   }
 
   function fieldStatus(draft, order, key) {
-    if (fieldChanged(draft, order, key)) {
-      return { kind: "edited", label: "edited", aria: "Edited by you" };
-    }
-    return confidenceStatus(order[key].value, order[key].confidence);
+    return core.fieldStatus(draft, order, key);
   }
 
   function lineStatus(draftLine, original) {
-    if (lineChanged(draftLine, original)) {
-      return { kind: "edited", label: "edited", aria: "Edited by you" };
-    }
-    return confidenceStatus(original.sku || original.description, original.confidence);
+    return core.lineStatus(draftLine, original);
   }
 
   function shakyField(order, key) {
@@ -188,8 +121,7 @@
   }
 
   function countLine(ready) {
-    var noun = ready === 1 ? "order" : "orders";
-    return "You have " + ready + " " + noun + " to review";
+    return core.countLine(ready);
   }
 
   function wireSignIn() {
@@ -234,12 +166,8 @@
   function renderHome(session) {
     var data = window.RekeyAppData;
     var doneIds = readCompleted();
-    var readyOrders = data.ORDERS.filter(function (order) {
-      return doneIds.indexOf(order.id) === -1;
-    });
-    var doneOrders = doneIds.map(function (id) {
-      return data.getOrder(id);
-    }).filter(Boolean);
+    var readyOrders = core.readyOrders(data.ORDERS, doneIds);
+    var doneOrders = core.completedOrders(data.ORDERS, doneIds);
     var welcome = document.getElementById("welcome");
     var count = document.getElementById("welcome-count");
     if (welcome) welcome.textContent = "Welcome, " + session.person;

@@ -1,0 +1,89 @@
+name: Uptime
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  probe:
+    name: probe
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check endpoints
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          pages_url="https://colelatour.github.io/rekeypilot-landing/app/"
+          tour_url="https://rekeypilot.5tourstudios.com/"
+
+          pages_code=$(curl -sS -L --max-redirs 10 --max-time 30 -o /dev/null -w "%{http_code}" "$pages_url" || true)
+          tour_code=$(curl -sS -L --max-redirs 10 --max-time 30 -o /dev/null -w "%{http_code}" "$tour_url" || true)
+          if [ -z "${pages_code}" ]; then pages_code="000"; fi
+          if [ -z "${tour_code}" ]; then tour_code="000"; fi
+
+          echo "GitHub Pages ${pages_url} -> ${pages_code}"
+          echo "5tour ${tour_url} -> ${tour_code}"
+
+          case "$pages_code" in
+            2*) pages_ok=1 ;;
+            *) pages_ok=0 ;;
+          esac
+          case "$tour_code" in
+            2*) tour_ok=1 ;;
+            *) tour_ok=0 ;;
+          esac
+
+          {
+            echo "### Uptime"
+            echo ""
+            echo "| Endpoint | Status |"
+            echo "| --- | --- |"
+            echo "| GitHub Pages | ${pages_code} |"
+            echo "| rekeypilot.5tourstudios.com | ${tour_code} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          if ! gh label list --limit 100 --json name --jq '.[] | select(.name=="outage") | .name' | grep -qx outage; then
+            gh label create outage --description "Availability failure" --color "B60205"
+          fi
+
+          issue=$(gh issue list --label outage --state open --limit 1 --json number --jq '.[0].number')
+
+          if [ "$pages_ok" = 1 ] && [ "$tour_ok" = 1 ]; then
+            if [ -n "${issue}" ] && [ "${issue}" != "null" ]; then
+              gh issue comment "$issue" --body "Recovered. Both endpoints returned 2xx after redirects. ${run_url}"
+              gh issue close "$issue" --reason completed
+            fi
+            exit 0
+          fi
+
+          tour_note=""
+          if [ "$tour_ok" != 1 ]; then
+            tour_note=" (warning only; this does not fail the job)"
+            echo "::warning::rekeypilot.5tourstudios.com returned ${tour_code}"
+          fi
+
+          body=$(printf '%s\n' \
+            "Uptime check failed. Run: ${run_url}" \
+            "" \
+            "- GitHub Pages (\`${pages_url}\`): **${pages_code}** (must be 2xx after redirects)" \
+            "- rekeypilot.5tourstudios.com (\`${tour_url}\`): **${tour_code}**${tour_note}")
+
+          if [ -z "${issue}" ] || [ "${issue}" = "null" ]; then
+            gh issue create --title "Uptime: endpoint check failed" --label outage --body "$body"
+          else
+            gh issue comment "$issue" --body "$body"
+          fi
+
+          if [ "$pages_ok" != 1 ]; then
+            echo "::error::GitHub Pages returned ${pages_code}"
+            exit 1
+          fi
